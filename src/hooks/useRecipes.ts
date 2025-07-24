@@ -1,57 +1,128 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Recipe } from '../types/Recipe';
+import { supabase } from '../supabaseClient';
+import { useAuth } from './useAuth';
 
 export const useRecipes = () => {
+  const { user } = useAuth();
   const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Load recipes from localStorage on mount
+  // Fetch from Supabase on mount
   useEffect(() => {
-    const savedRecipes = localStorage.getItem('recipes');
-    if (savedRecipes) {
-      try {
-        setRecipes(JSON.parse(savedRecipes));
-      } catch (error) {
-        console.error('Error loading recipes from localStorage:', error);
-      }
+    if (user) fetchRecipes();
+  }, [user]);
+
+  const fetchRecipes = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('recipes')
+      .select('*')
+      .eq('user_id', user?.id) // RLS enforced here
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching recipes:', error);
+    } else {
+      setRecipes(data || []);
     }
-  }, []);
 
-  // Save recipes to localStorage whenever recipes change
-  useEffect(() => {
-    localStorage.setItem('recipes', JSON.stringify(recipes));
-  }, [recipes]);
+    setLoading(false);
+  };
 
-  const addRecipe = (recipe: Omit<Recipe, 'id' | 'dateAdded'>) => {
-    const newRecipe: Recipe = {
-      ...recipe,
-      id: Date.now().toString(),
-      dateAdded: new Date().toISOString()
-    };
+  const addRecipe = async (recipe: Omit<Recipe, 'id' | 'dateAdded'>) => {
+  const supabaseRecipe = {
+    title: recipe.title,
+    ingredients: recipe.ingredients,
+    instructions: recipe.instructions,
+    prep_time: recipe.prepTime,
+    cook_time: recipe.cookTime,
+    total_time: recipe.prepTime && recipe.cookTime ? recipe.prepTime + recipe.cookTime : null,
+    servings: recipe.servings,
+    image_url: recipe.imageUrl,
+    source_url: recipe.sourceUrl,
+    tags: recipe.tags,
+    author: recipe.author,
+    cuisine: recipe.cuisine,
+    meal_type: recipe.mealType,
+    user_id: user?.id,
+  };
+
+  const { data, error } = await supabase
+    .from('recipes')
+    .insert([supabaseRecipe])
+    .select();
+
+  if (error) {
+    console.error('Error adding recipe:', error);
+    throw error;
+  }
+
+  const newRecipe = data?.[0];
+  if (newRecipe) {
     setRecipes(prev => [newRecipe, ...prev]);
-    return Promise.resolve(newRecipe);
-  };
+  }
 
-  const deleteRecipe = (id: string) => {
+  return newRecipe;
+};
+
+  const deleteRecipe = async (id: string) => {
+    const { error } = await supabase
+      .from('recipes')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user?.id); // RLS enforced here
+
+    if (error) {
+      console.error('Error deleting recipe:', error);
+      throw error;
+    }
+
     setRecipes(prev => prev.filter(recipe => recipe.id !== id));
-    return Promise.resolve();
   };
 
-  const updateRecipe = (id: string, updates: Partial<Recipe>) => {
-    setRecipes(prev => prev.map(recipe => 
-      recipe.id === id ? { ...recipe, ...updates } : recipe
-    ));
-    return Promise.resolve();
+  const updateRecipe = async (id: string, updates: Partial<Recipe>) => {
+    const { data, error } = await supabase
+      .from('recipes')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', user?.id) // RLS enforced here
+      .select();
+
+    if (error) {
+      console.error('Error updating recipe:', error);
+      throw error;
+    }
+
+    const updated = data?.[0];
+    if (updated) {
+      setRecipes(prev =>
+        prev.map(recipe => (recipe.id === id ? { ...recipe, ...updated } : recipe))
+      );
+    }
+
+    return updated;
   };
 
-  const importRecipes = (importedRecipes: Recipe[]) => {
-    // Add imported recipes with new IDs to avoid conflicts
-    const recipesWithNewIds = importedRecipes.map(recipe => ({
+  const importRecipes = async (importedRecipes: Recipe[]) => {
+    const prepared = importedRecipes.map(recipe => ({
       ...recipe,
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-      dateAdded: new Date().toISOString()
+      id: undefined, // let Supabase assign ID
+      user_id: user?.id,
+      created_at: new Date().toISOString(),
     }));
-    setRecipes(prev => [...recipesWithNewIds, ...prev]);
-    return Promise.resolve();
+
+    const { data, error } = await supabase
+      .from('recipes')
+      .insert(prepared)
+      .select();
+
+    if (error) {
+      console.error('Error importing recipes:', error);
+      throw error;
+    }
+
+    setRecipes(prev => [...(data || []), ...prev]);
   };
 
   const exportRecipes = () => {
@@ -68,18 +139,28 @@ export const useRecipes = () => {
     return Promise.resolve();
   };
 
-  const clearAllRecipes = () => {
+  const clearAllRecipes = async () => {
+    const { error } = await supabase
+      .from('recipes')
+      .delete()
+      .eq('user_id', user?.id);
+
+    if (error) {
+      console.error('Error clearing recipes:', error);
+      throw error;
+    }
+
     setRecipes([]);
-    return Promise.resolve();
   };
 
   return {
     recipes,
+    loading,
     addRecipe,
     deleteRecipe,
     updateRecipe,
     importRecipes,
     exportRecipes,
-    clearAllRecipes
+    clearAllRecipes,
   };
 };
