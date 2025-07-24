@@ -61,7 +61,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
         }}
       >
         <span>{selectedOption ? selectedOption.label : placeholder}</span>
-        <ChevronDown size={18} className="dropdown-arrow" />
+        {/* <ChevronDown size={18} className="dropdown-arrow" /> */}
       </div>
       
       <div className={`dropdown-menu ${isOpen ? 'show' : ''}`}>
