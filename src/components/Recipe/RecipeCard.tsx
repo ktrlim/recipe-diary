@@ -6,9 +6,10 @@ import { Recipe } from '../../types/Recipe';
 interface RecipeCardProps {
   recipe: Recipe;
   onDelete: (id: string) => void;
+  onView: (recipe: Recipe) => void;
 }
 
-const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onDelete }) => {
+const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onDelete, onView }) => {
   const getMealTypeColor = (mealType?: string) => {
     switch (mealType) {
       case 'breakfast': return 'linear-gradient(135deg, #FF7A7A, #FF6B6B)';
@@ -22,13 +23,14 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onDelete }) => {
   };
 
   return (
-    <Card className="h-100 recipe-card">
+    <Card className="h-100 recipe-card" style={{ cursor: 'pointer' }}>
       <div className="position-relative">
         {recipe.imageUrl && (
           <Card.Img 
             variant="top" 
             src={recipe.imageUrl} 
             className="card-img-top"
+            onClick={() => onView(recipe)}
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = 'none';
             }}
@@ -50,7 +52,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onDelete }) => {
         )}
       </div>
       
-      <Card.Body className="d-flex flex-column">
+      <Card.Body className="d-flex flex-column" onClick={() => onView(recipe)}>
         <Card.Title className="card-title">
           {recipe.title}
         </Card.Title>
@@ -111,6 +113,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onDelete }) => {
                   href={recipe.sourceUrl}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <ExternalLink size={14} className="me-1" />
                   Source
@@ -121,7 +124,10 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onDelete }) => {
             <Button 
               variant="outline-danger"
               size="sm"
-              onClick={() => onDelete(recipe.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(recipe.id);
+              }}
             >
               <Trash2 size={14} />
             </Button>

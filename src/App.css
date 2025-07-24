@@ -678,3 +678,37 @@ h5 { font-size: 1.25rem; line-height: 1.4; }
     border: 1px solid #ddd;
   }
 }
+
+/* Recipe Detail Modal Styles */
+.recipe-detail-modal .modal-content {
+  border: none;
+  border-radius: 20px;
+  background: var(--warm-white);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.recipe-detail-modal .modal-body {
+  padding: 2rem;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.recipe-detail-modal .modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.recipe-detail-modal .modal-body::-webkit-scrollbar-track {
+  background: var(--light-gray);
+  border-radius: 3px;
+}
+
+.recipe-detail-modal .modal-body::-webkit-scrollbar-thumb {
+  background: var(--charcoal);
+  border-radius: 3px;
+}
+
+@media (max-width: 768px) {
+  .recipe-detail-modal .modal-body {
+    padding: 1.5rem;
+  }
+}

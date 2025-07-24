@@ -4,6 +4,7 @@ import { Search, Filter } from 'lucide-react';
 import { Recipe } from '../../types/Recipe';
 import RecipeCard from './RecipeCard';
 import CustomDropdown from '../UI/CustomDropdown';
+import RecipeDetailModal from './RecipeDetailModal';
 
 interface RecipeListProps {
   recipes: Recipe[];
@@ -14,6 +15,8 @@ const RecipeList: React.FC<RecipeListProps> = ({ recipes, onDeleteRecipe }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMealType, setSelectedMealType] = useState('');
   const [selectedCuisine, setSelectedCuisine] = useState('');
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [showModal, setShowModal] = useState(false);
 
   const filteredRecipes = useMemo(() => {
     return recipes.filter(recipe => {
@@ -51,8 +54,19 @@ const RecipeList: React.FC<RecipeListProps> = ({ recipes, onDeleteRecipe }) => {
     }))
   ];
 
+  const handleViewRecipe = (recipe: Recipe) => {
+    setSelectedRecipe(recipe);
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setSelectedRecipe(null);
+  };
+
   return (
-    <Container fluid className="py-4 fade-in-up">
+    <>
+      <Container fluid className="py-4 fade-in-up">
       <div className="search-filter-section">
         <Row className="align-items-end">
           <Col md={6} className="mb-3">
@@ -122,12 +136,20 @@ const RecipeList: React.FC<RecipeListProps> = ({ recipes, onDeleteRecipe }) => {
               <RecipeCard 
                 recipe={recipe} 
                 onDelete={onDeleteRecipe}
+                onView={handleViewRecipe}
               />
             </Col>
           ))}
         </Row>
       )}
     </Container>
+
+      <RecipeDetailModal
+        recipe={selectedRecipe}
+        show={showModal}
+        onHide={handleCloseModal}
+      />
+    </>
   );
 };
 
