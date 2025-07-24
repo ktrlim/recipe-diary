@@ -18,7 +18,15 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+
+    /* Custom paths */
+    "baseUrl": "./src",
+    "paths": {
+      "firebase": ["firebase.ts"],
+      "hooks/*": ["hooks/*"],
+      "components/*": ["components/*"]
+    }
   },
   "include": ["src"]
 }

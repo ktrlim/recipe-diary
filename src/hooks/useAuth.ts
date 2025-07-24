@@ -1,64 +1,60 @@
 import { useState, useEffect } from 'react';
+import { auth } from '../firebase';
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  updateProfile,
+  User as FirebaseUser,
+} from 'firebase/auth';
 
 interface User {
   id: string;
   email: string;
-  name?: string;
+  name?: string; // Not stored by Firebase Auth unless you set it manually
 }
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Load user from localStorage on mount
+  // Watch Firebase auth state
   useEffect(() => {
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (error) {
-        console.error('Error loading user from localStorage:', error);
-        localStorage.removeItem('currentUser');
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        setUser({
+          id: firebaseUser.uid,
+          email: firebaseUser.email ?? '',
+          name: firebaseUser.displayName ?? undefined,
+        });
+      } else {
+        setUser(null);
       }
-    }
-    setLoading(false);
-  }, []);
+      setLoading(false);
+    });
 
-  // Save user to localStorage whenever user changes
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem('currentUser', JSON.stringify(user));
-    } else {
-      localStorage.removeItem('currentUser');
-    }
-  }, [user]);
+    return () => unsubscribe();
+  }, []);
 
   const signUp = async (email: string, password: string, name?: string) => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Check if user already exists
-      const existingUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-      if (existingUsers.find((u: any) => u.email === email)) {
-        throw new Error('User already exists with this email');
+      const userCred = await createUserWithEmailAndPassword(auth, email, password);
+      const firebaseUser = userCred.user;
+
+      // Optionally update display name
+      if (name && firebaseUser) {
+        await updateProfile(firebaseUser, { displayName: name });
       }
-      
-      const newUser: User = {
-        id: Date.now().toString(),
-        email,
-        name
-      };
-      
-      // Save to registered users
-      existingUsers.push({ ...newUser, password });
-      localStorage.setItem('registeredUsers', JSON.stringify(existingUsers));
-      
-      setUser(newUser);
-      return newUser;
-    } catch (error) {
-      throw error;
+
+      setUser({
+        id: firebaseUser.uid,
+        email: firebaseUser.email ?? '',
+        name: name,
+      });
+
+      return firebaseUser;
     } finally {
       setLoading(false);
     }
@@ -67,39 +63,26 @@ export const useAuth = () => {
   const signIn = async (email: string, password: string) => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const existingUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-      const foundUser = existingUsers.find((u: any) => u.email === email && u.password === password);
-      
-      if (!foundUser) {
-        throw new Error('Invalid email or password');
-      }
-      
-      const user: User = {
-        id: foundUser.id,
-        email: foundUser.email,
-        name: foundUser.name
-      };
-      
-      setUser(user);
-      return user;
-    } catch (error) {
-      throw error;
+      const userCred = await signInWithEmailAndPassword(auth, email, password);
+      const firebaseUser = userCred.user;
+
+      setUser({
+        id: firebaseUser.uid,
+        email: firebaseUser.email ?? '',
+        name: firebaseUser.displayName ?? undefined,
+      });
+
+      return firebaseUser;
     } finally {
       setLoading(false);
     }
   };
 
-  const signOut = async () => {
+  const signOutUser = async () => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await signOut(auth);
       setUser(null);
-    } catch (error) {
-      console.error('Error signing out:', error);
     } finally {
       setLoading(false);
     }
@@ -110,7 +93,7 @@ export const useAuth = () => {
     loading,
     signUp,
     signIn,
-    signOut,
-    isAuthenticated: !!user
+    signOut: signOutUser,
+    isAuthenticated: !!user,
   };
 };
