@@ -119,16 +119,40 @@ const AddRecipeForm: React.FC<AddRecipeFormProps> = ({ onAddRecipe }) => {
     try {
       // This is a placeholder for web scraping functionality
       // In a real app, you'd call your backend API that handles web scraping
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
-      
-      // For now, we'll just populate the form with the URL in the source field
-      setFormData(prev => ({
-        ...prev,
-        sourceUrl: importUrl,
-        title: 'Imported Recipe',
-        ingredients: 'Please edit the imported ingredients',
-        instructions: 'Please edit the imported instructions'
-      }));
+     try {
+      const response = await fetch('https://recipe-scraper-api-pmpa.onrender.com/api/recipe', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ url: importUrl }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Scraper API failed');
+    }
+
+    const data = await response.json();
+
+    // Convert JSON into form-friendly strings
+    setFormData(prev => ({
+      ...prev,
+      title: data.title || '',
+      ingredients: Array.isArray(data.ingredients) ? data.ingredients.join('\n') : '',
+      instructions: data.instructions || '',
+      prepTime: data.prep_time || '',
+      cookTime: data.cook_time || '',
+      servings: data.servings || '',
+      imageUrl: data.image || '',
+      sourceUrl: data.source || importUrl,
+    }));
+
+  setActiveTab('manual');
+  setSuccess('Recipe imported! Please review and edit the details below.');
+} catch (err) {
+  console.error(err);
+  setError('Failed to import recipe. Please check the URL and try again.');
+}
       
       setActiveTab('manual');
       setSuccess('Recipe imported! Please review and edit the details below.');
