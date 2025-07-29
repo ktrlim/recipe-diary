@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Container, Row, Col, Form, Button, Card, Alert, Spinner } from 'react-bootstrap';
 import { Plus, Link, Save } from 'lucide-react';
-import { Recipe, RecipeFormData } from '../../types/Recipe';
 import CustomDropdown from '../UI/CustomDropdown';
+import { RecipeFormData } from '../../types/Recipe'; // Assuming types/Recipe.ts exists
 
 interface AddRecipeFormProps {
-  onAddRecipe: (recipe: Omit<Recipe, 'id' | 'dateAdded'>) => void;
+  onAddRecipe: (recipeData: RecipeFormData) => Promise<void>; // Expecting formData
 }
 
 const AddRecipeForm: React.FC<AddRecipeFormProps> = ({ onAddRecipe }) => {
@@ -81,25 +81,11 @@ const AddRecipeForm: React.FC<AddRecipeFormProps> = ({ onAddRecipe }) => {
     }
 
     try {
-      const recipe: Omit<Recipe, 'id' | 'dateAdded'> = {
-        title: formData.title.trim(),
-        ingredients: formData.ingredients.split('\n').filter(ing => ing.trim()),
-        instructions: formData.instructions.split('\n').filter(inst => inst.trim()),
-        prepTime: formData.prepTime ? parseInt(formData.prepTime) : undefined,
-        cookTime: formData.cookTime ? parseInt(formData.cookTime) : undefined,
-        servings: formData.servings ? parseInt(formData.servings) : undefined,
-        imageUrl: formData.imageUrl.trim() || undefined,
-        sourceUrl: formData.sourceUrl.trim() || undefined,
-        tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(Boolean) : undefined,
-        author: formData.author.trim() || undefined,
-        cuisine: formData.cuisine.trim() || undefined,
-        mealType: formData.mealType as Recipe['mealType'] || undefined
-      };
-
-      await onAddRecipe(recipe);
+      await onAddRecipe(formData); // Call the prop function with formData
       setSuccess('Recipe added successfully!');
       resetForm();
-    } catch (err) {
+    } catch (err: any) {
+      // Error will be set by App.tsx, but we can show a general message here too
       setError('Failed to save recipe. Please try again.');
       console.error('Error saving recipe:', err);
     } finally {
@@ -145,6 +131,10 @@ const AddRecipeForm: React.FC<AddRecipeFormProps> = ({ onAddRecipe }) => {
       servings: data.servings || '',
       imageUrl: data.image || '',
       sourceUrl: data.source || importUrl,
+      tags: Array.isArray(data.tags) ? data.tags.join(', ') : '',
+      author: data.author || '',
+      cuisine: data.cuisine || '',
+      mealType: data.meal_type || ''
     }));
 
   setActiveTab('manual');
@@ -208,10 +198,9 @@ const AddRecipeForm: React.FC<AddRecipeFormProps> = ({ onAddRecipe }) => {
                         variant="primary"
                         onClick={handleImportFromUrl}
                         disabled={loading || !importUrl.trim()}
-                        variant="primary"
                       >
                         {loading ? <Spinner size="sm" /> : 
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-download" viewBox="0 0 16 16">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-download" viewBox="0 0 16 16">
                             <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
                             <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/>
                           </svg>
@@ -219,9 +208,6 @@ const AddRecipeForm: React.FC<AddRecipeFormProps> = ({ onAddRecipe }) => {
                       </Button>
                     </div>
                   </Form.Group>
-                  {/* <Alert variant="info" className="small">
-                    <strong>Note:</strong> URL import functionality is a placeholder. In a real app, this would extract recipe data from the provided URL.
-                  </Alert> */}
                 </div>
               )}
               
@@ -386,14 +372,16 @@ const AddRecipeForm: React.FC<AddRecipeFormProps> = ({ onAddRecipe }) => {
                     variant="outline-secondary" 
                     onClick={resetForm}
                     type="button"
+                    disabled={loading}
                   >
                     Clear Form
                   </Button>
                   <Button 
                     variant="danger" 
                     type="submit"
+                    disabled={loading}
                   >
-                    <Save size={16} className="me-1" />
+                    {loading ? <Spinner size="sm" animation="border" className="me-2" /> : <Save size={16} className="me-1" />}
                     Save Recipe
                   </Button>
                 </div>
@@ -407,3 +395,4 @@ const AddRecipeForm: React.FC<AddRecipeFormProps> = ({ onAddRecipe }) => {
 };
 
 export default AddRecipeForm;
+
