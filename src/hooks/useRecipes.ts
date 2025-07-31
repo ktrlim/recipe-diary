@@ -90,33 +90,53 @@ export const useRecipes = () => {
     setRecipes(prev => prev.filter(recipe => recipe.id !== id));
   };
 
-  const updateRecipe = async (id: string, updates: Partial<Recipe>) => {
-    if (!user) throw new Error('User not authenticated'); // Add this check
-    
-    const { data, error } = await supabase
-      .from('recipes')
-      .update(updates)
-      .eq('id', id)
-      .eq('user_id', user.id) // Changed from user?.id to user.id
-      .select();
-
-    if (error) {
-      console.error('Error updating recipe:', error);
-      throw error;
-    }
-
-    const updated = data?.[0];
-    if (updated) {
-      setRecipes(prev =>
-        prev.map(recipe => (recipe.id === id ? { ...recipe, ...updated } : recipe))
-      );
-    }
-
-    return updated;
+  const updateRecipe = async (id: string, recipeFormData: any) => {
+  if (!user) throw new Error('User not authenticated');
+  
+  // Convert form strings to proper types for Supabase (same as addRecipe)
+  const supabaseRecipe = {
+    title: recipeFormData.title,
+    ingredients: recipeFormData.ingredients.split('\n').map((i: string) => i.trim()).filter((i: string) => i),
+    instructions: recipeFormData.instructions.split('\n').map((i: string) => i.trim()).filter((i: string) => i),
+    prep_time: recipeFormData.prepTime ? parseInt(recipeFormData.prepTime) : null,
+    cook_time: recipeFormData.cookTime ? parseInt(recipeFormData.cookTime) : null,
+    total_time: (recipeFormData.prepTime && recipeFormData.cookTime) 
+      ? parseInt(recipeFormData.prepTime) + parseInt(recipeFormData.cookTime) 
+      : null,
+    servings: recipeFormData.servings ? parseInt(recipeFormData.servings) : null,
+    image_url: recipeFormData.imageUrl || null,
+    source_url: recipeFormData.sourceUrl || null,
+    tags: recipeFormData.tags ? recipeFormData.tags.split(',').map((t: string) => t.trim()).filter((t: string) => t) : [],
+    author: recipeFormData.author || null,
+    cuisine: recipeFormData.cuisine || null,
+    meal_type: recipeFormData.mealType || null,
+    // Don't include user_id in updates, it should stay the same
   };
 
+  const { data, error } = await supabase
+    .from('recipes')
+    .update(supabaseRecipe)
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .select();
+
+  if (error) {
+    console.error('Error updating recipe:', error);
+    throw error;
+  }
+
+  const updated = data?.[0];
+  if (updated) {
+    setRecipes(prev =>
+      prev.map(recipe => (recipe.id === id ? { ...recipe, ...updated } : recipe))
+    );
+  }
+
+  return updated;
+};
+
   const importRecipes = async (importedRecipes: Recipe[]) => {
-    if (!user) throw new Error('User not authenticated'); // Add this check
+    if (!user) throw new Error('User not authenticated');
     
     const prepared = importedRecipes.map(recipe => ({
       ...recipe,
@@ -153,7 +173,7 @@ export const useRecipes = () => {
   };
 
   const clearAllRecipes = async () => {
-    if (!user) throw new Error('User not authenticated'); // Add this check
+    if (!user) throw new Error('User not authenticated'); // Auth check
     
     const { error } = await supabase
       .from('recipes')

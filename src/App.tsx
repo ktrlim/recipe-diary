@@ -8,17 +8,39 @@ import AccountPage from './components/Account/AccountPage';
 import AuthPage from './components/Auth/AuthPage';
 import { useRecipes } from './hooks/useRecipes';
 import { useAuth } from './hooks/useAuth';
+import { Recipe } from './types/Recipe';
 
 function App() {
   const [activeTab, setActiveTab] = useState<'recipes' | 'add' | 'account'>('recipes');
-  const { recipes, addRecipe, deleteRecipe, importRecipes, exportRecipes, clearAllRecipes } = useRecipes();
+  const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
+  const { recipes, addRecipe, updateRecipe, deleteRecipe, importRecipes, exportRecipes, clearAllRecipes } = useRecipes();
   const { user, loading, signUp, signIn, signOut, isAuthenticated } = useAuth();
 
-  const handleAddRecipe = (recipe: any) => {
-    return addRecipe(recipe).then(() => {
+  const handleAddRecipe = (formData: RecipeFormData) => {
+  return addRecipe(formData).then(() => {
+    setActiveTab('recipes');
+  });
+};
+
+const handleUpdateRecipe = (formData: RecipeFormData) => {
+  if (editingRecipe) {
+    return updateRecipe(editingRecipe.id, formData).then(() => {
       setActiveTab('recipes');
+      setEditingRecipe(null);
     });
+  }
+  return Promise.resolve();
+};
+
+  const handleEditRecipe = (recipe: Recipe) => {
+    setEditingRecipe(recipe);
+    setActiveTab('add');
   };
+
+  const handleCancelEdit = () => {
+    setEditingRecipe(null);
+    setActiveTab('recipes');
+  }
 
   const handleSignUp = async (email: string, password: string, name?: string) => {
     await signUp(email, password, name);
@@ -46,10 +68,16 @@ function App() {
           <RecipeList 
             recipes={recipes} 
             onDeleteRecipe={deleteRecipe}
+            onEditRecipe={handleEditRecipe} 
           />
         )}
         {activeTab === 'add' && (
-          <AddRecipeForm onAddRecipe={handleAddRecipe} />
+          <AddRecipeForm 
+            // onAddRecipe={handleAddRecipe} 
+            onAddRecipe={editingRecipe ? handleUpdateRecipe : handleAddRecipe}
+            editingRecipe={editingRecipe}
+            onCancelEdit={handleCancelEdit}
+          />
         )}
         {activeTab === 'account' && (
           isAuthenticated ? (

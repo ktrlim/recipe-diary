@@ -1,15 +1,16 @@
 import React from 'react';
 import { Card, Badge, Button, Row, Col } from 'react-bootstrap';
-import { Clock, Users, Trash2, ExternalLink } from 'lucide-react';
+import { Clock, Users, Trash2, ExternalLink, Edit } from 'lucide-react';
 import { Recipe } from '../../types/Recipe';
 
 interface RecipeCardProps {
   recipe: Recipe;
   onDelete: (id: string) => void;
+  onEdit: (recipe: Recipe) => void;
   onView: (recipe: Recipe) => void;
 }
 
-const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onDelete, onView }) => {
+const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onDelete, onEdit, onView }) => {
   const getMealTypeColor = (mealType?: string) => {
     switch (mealType) {
       case 'breakfast': return 'linear-gradient(135deg, #FF7A7A, #FF6B6B)';
@@ -120,17 +121,30 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onDelete, onView }) => 
                 </Button>
               )}
             </div>
-            
-            <Button 
-              variant="outline-danger"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(recipe.id);
-              }}
-            >
-              <Trash2 size={14} />
-            </Button>
+
+            <div className="d-flex gap-2">
+              <Button
+                variant="outline-secondary"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(recipe);
+                }}
+                title="Edit recipe"
+                >
+                  <Edit size={14} />
+                </Button>
+                <Button 
+                variant="outline-danger"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(recipe.id);
+                }}
+              >
+                <Trash2 size={14} />
+              </Button>
+            </div>
           </div>
         </div>
       </Card.Body>

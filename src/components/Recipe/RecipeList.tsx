@@ -9,9 +9,10 @@ import RecipeDetailModal from './RecipeDetailModal';
 interface RecipeListProps {
   recipes: Recipe[];
   onDeleteRecipe: (id: string) => void;
+  onEditRecipe: (recipe: Recipe) => void;
 }
 
-const RecipeList: React.FC<RecipeListProps> = ({ recipes, onDeleteRecipe }) => {
+const RecipeList: React.FC<RecipeListProps> = ({ recipes, onDeleteRecipe, onEditRecipe }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMealType, setSelectedMealType] = useState('');
   const [selectedCuisine, setSelectedCuisine] = useState('');
@@ -136,6 +137,7 @@ const RecipeList: React.FC<RecipeListProps> = ({ recipes, onDeleteRecipe }) => {
               <RecipeCard 
                 recipe={recipe} 
                 onDelete={onDeleteRecipe}
+                onEdit={onEditRecipe}
                 onView={handleViewRecipe}
               />
             </Col>

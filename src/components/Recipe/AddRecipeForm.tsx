@@ -1,34 +1,79 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Form, Button, Card, Alert, Spinner } from 'react-bootstrap';
 import { Plus, Link, Save } from 'lucide-react';
 import CustomDropdown from '../UI/CustomDropdown';
-import { RecipeFormData } from '../../types/Recipe'; // Assuming types/Recipe.ts exists
+import { RecipeFormData, Recipe } from '../../types/Recipe';
 
 interface AddRecipeFormProps {
-  onAddRecipe: (recipeData: RecipeFormData) => Promise<void>; // Expecting formData
+  onAddRecipe: (recipeData: RecipeFormData) => Promise<void>;
+  editingRecipe?: Recipe | null;
+  onCancelEdit?: () => void;
 }
 
-const AddRecipeForm: React.FC<AddRecipeFormProps> = ({ onAddRecipe }) => {
+const AddRecipeForm: React.FC<AddRecipeFormProps> = ({ 
+  onAddRecipe, 
+  editingRecipe, 
+  onCancelEdit 
+}) => {
   const [activeTab, setActiveTab] = useState<'manual' | 'import'>('manual');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [importUrl, setImportUrl] = useState('');
   
-  const [formData, setFormData] = useState<RecipeFormData>({
-    title: '',
-    ingredients: '',
-    instructions: '',
-    prepTime: '',
-    cookTime: '',
-    servings: '',
-    imageUrl: '',
-    sourceUrl: '',
-    tags: '',
-    author: '',
-    cuisine: '',
-    mealType: ''
+  const [formData, setFormData] = useState<RecipeFormData>(() => {
+    if (editingRecipe) {
+      return {
+        title: editingRecipe.title || '',
+        ingredients: editingRecipe.ingredients?.join('\n') || '',
+        instructions: editingRecipe.instructions?.join('\n') || '',
+        prepTime: editingRecipe.prepTime?.toString() || '',
+        cookTime: editingRecipe.cookTime?.toString() || '',
+        servings: editingRecipe.servings?.toString() || '',
+        imageUrl: editingRecipe.imageUrl || '',
+        sourceUrl: editingRecipe.sourceUrl || '',
+        tags: editingRecipe.tags?.join(', ') || '',
+        author: editingRecipe.author || '',
+        cuisine: editingRecipe.cuisine || '',
+        mealType: editingRecipe.mealType || ''
+      };
+    }
+    return {
+      title: '',
+      ingredients: '',
+      instructions: '',
+      prepTime: '',
+      cookTime: '',
+      servings: '',
+      imageUrl: '',
+      sourceUrl: '',
+      tags: '',
+      author: '',
+      cuisine: '',
+      mealType: ''
+    };
   });
+
+  // Update form when editingRecipe changes
+  useEffect(() => {
+    if (editingRecipe) {
+      setFormData({
+        title: editingRecipe.title || '',
+        ingredients: editingRecipe.ingredients?.join('\n') || '',
+        instructions: editingRecipe.instructions?.join('\n') || '',
+        prepTime: editingRecipe.prepTime?.toString() || '',
+        cookTime: editingRecipe.cookTime?.toString() || '',
+        servings: editingRecipe.servings?.toString() || '',
+        imageUrl: editingRecipe.imageUrl || '',
+        sourceUrl: editingRecipe.sourceUrl || '',
+        tags: editingRecipe.tags?.join(', ') || '',
+        author: editingRecipe.author || '',
+        cuisine: editingRecipe.cuisine || '',
+        mealType: editingRecipe.mealType || ''
+      });
+      setActiveTab('manual');
+    }
+  }, [editingRecipe]);
 
   const resetForm = () => {
     setFormData({
@@ -81,12 +126,13 @@ const AddRecipeForm: React.FC<AddRecipeFormProps> = ({ onAddRecipe }) => {
     }
 
     try {
-      await onAddRecipe(formData); // Call the prop function with formData
-      setSuccess('Recipe added successfully!');
-      resetForm();
+      await onAddRecipe(formData);
+      setSuccess(editingRecipe ? 'Recipe updated successfully!' : 'Recipe added successfully!');
+      if (!editingRecipe) {
+        resetForm();
+      }
     } catch (err: any) {
-      // Error will be set by App.tsx, but we can show a general message here too
-      setError('Failed to save recipe. Please try again.');
+      setError(editingRecipe ? 'Failed to update recipe. Please try again.' : 'Failed to save recipe. Please try again.');
       console.error('Error saving recipe:', err);
     } finally {
       setLoading(false);
@@ -103,50 +149,41 @@ const AddRecipeForm: React.FC<AddRecipeFormProps> = ({ onAddRecipe }) => {
     setError(null);
     
     try {
-      // This is a placeholder for web scraping functionality
-      // In a real app, you'd call your backend API that handles web scraping
-     try {
       const response = await fetch('https://recipe-scraper-api-pmpa.onrender.com/api/recipe', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ url: importUrl }),
-    });
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: importUrl }),
+      });
 
-    if (!response.ok) {
-      throw new Error('Scraper API failed');
-    }
+      if (!response.ok) {
+        throw new Error('Scraper API failed');
+      }
 
-    const data = await response.json();
+      const data = await response.json();
 
-    // Convert JSON into form-friendly strings
-    setFormData(prev => ({
-      ...prev,
-      title: data.title || '',
-      ingredients: Array.isArray(data.ingredients) ? data.ingredients.join('\n') : '',
-      instructions: data.instructions || '',
-      prepTime: data.prep_time || '',
-      cookTime: data.cook_time || '',
-      servings: data.servings || '',
-      imageUrl: data.image || '',
-      sourceUrl: data.source || importUrl,
-      tags: Array.isArray(data.tags) ? data.tags.join(', ') : '',
-      author: data.author || '',
-      cuisine: data.cuisine || '',
-      mealType: data.meal_type || ''
-    }));
+      // Convert JSON into form-friendly strings
+      setFormData(prev => ({
+        ...prev,
+        title: data.title || '',
+        ingredients: Array.isArray(data.ingredients) ? data.ingredients.join('\n') : '',
+        instructions: data.instructions || '',
+        prepTime: data.prep_time || '',
+        cookTime: data.cook_time || '',
+        servings: data.servings || '',
+        imageUrl: data.image || '',
+        sourceUrl: data.source || importUrl,
+        tags: Array.isArray(data.tags) ? data.tags.join(', ') : '',
+        author: data.author || '',
+        cuisine: data.cuisine || '',
+        mealType: data.meal_type || ''
+      }));
 
-  setActiveTab('manual');
-  setSuccess('Recipe imported! Please review and edit the details below.');
-} catch (err) {
-  console.error(err);
-  setError('Failed to import recipe. Please check the URL and try again.');
-}
-      
       setActiveTab('manual');
       setSuccess('Recipe imported! Please review and edit the details below.');
     } catch (err) {
+      console.error(err);
       setError('Failed to import recipe. Please check the URL and try again.');
     } finally {
       setLoading(false);
@@ -159,22 +196,29 @@ const AddRecipeForm: React.FC<AddRecipeFormProps> = ({ onAddRecipe }) => {
         <Col lg={8} xl={6}>
           <Card>
             <Card.Header>
-              <div className="d-flex justify-content-center">
-                <Button
-                  variant={activeTab === 'manual' ? 'danger' : 'outline-danger'}
-                  onClick={() => setActiveTab('manual')}
-                  className="me-2"
-                >
-                  <Plus size={16} className="me-1" />
-                  Add Manually
-                </Button>
-                <Button
-                  variant={activeTab === 'import' ? 'danger' : 'outline-danger'}
-                  onClick={() => setActiveTab('import')}
-                >
-                  <Link size={16} className="me-1" />
-                  Import from URL
-                </Button>
+              <div className="d-flex justify-content-between align-items-center">
+                <h4 className="mb-0">
+                  {editingRecipe ? 'Edit Recipe' : 'Add New Recipe'}
+                </h4>
+                {!editingRecipe && (
+                  <div className="d-flex">
+                    <Button
+                      variant={activeTab === 'manual' ? 'danger' : 'outline-danger'}
+                      onClick={() => setActiveTab('manual')}
+                      className="me-2"
+                    >
+                      <Plus size={16} className="me-1" />
+                      Add Manually
+                    </Button>
+                    <Button
+                      variant={activeTab === 'import' ? 'danger' : 'outline-danger'}
+                      onClick={() => setActiveTab('import')}
+                    >
+                      <Link size={16} className="me-1" />
+                      Import from URL
+                    </Button>
+                  </div>
+                )}
               </div>
             </Card.Header>
             
@@ -182,7 +226,7 @@ const AddRecipeForm: React.FC<AddRecipeFormProps> = ({ onAddRecipe }) => {
               {error && <Alert variant="danger" className="mb-3">{error}</Alert>}
               {success && <Alert variant="success" className="mb-3">{success}</Alert>}
               
-              {activeTab === 'import' && (
+              {activeTab === 'import' && !editingRecipe && (
                 <div className="mb-4">
                   <Form.Group className="mb-3">
                     <Form.Label>Recipe URL</Form.Label>
@@ -368,21 +412,42 @@ const AddRecipeForm: React.FC<AddRecipeFormProps> = ({ onAddRecipe }) => {
                 </Form.Group>
                 
                 <div className="d-flex justify-content-between">
-                  <Button 
-                    variant="outline-secondary" 
-                    onClick={resetForm}
-                    type="button"
-                    disabled={loading}
-                  >
-                    Clear Form
-                  </Button>
+                  <div className="d-flex gap-2">
+                    {editingRecipe && onCancelEdit && (
+                      <Button 
+                        variant="outline-secondary" 
+                        onClick={onCancelEdit}
+                        type="button"
+                        disabled={loading}
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                    <Button 
+                      variant="outline-secondary" 
+                      onClick={resetForm}
+                      type="button"
+                      disabled={loading}
+                    >
+                      Clear Form
+                    </Button>
+                  </div>
                   <Button 
                     variant="danger" 
                     type="submit"
                     disabled={loading}
                   >
-                    {loading ? <Spinner size="sm" animation="border" className="me-2" /> : <Save size={16} className="me-1" />}
-                    Save Recipe
+                    {loading ? (
+                      <>
+                        <Spinner size="sm" animation="border" className="me-2" />
+                        {editingRecipe ? 'Updating...' : 'Saving...'}
+                      </>
+                    ) : (
+                      <>
+                        <Save size={16} className="me-1" />
+                        {editingRecipe ? 'Update Recipe' : 'Save Recipe'}
+                      </>
+                    )}
                   </Button>
                 </div>
               </Form>
@@ -395,4 +460,3 @@ const AddRecipeForm: React.FC<AddRecipeFormProps> = ({ onAddRecipe }) => {
 };
 
 export default AddRecipeForm;
-
