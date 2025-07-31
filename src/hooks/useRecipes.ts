@@ -8,25 +8,46 @@ export const useRecipes = () => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const mapSupabaseToRecipe = (supabaseRecipe: any): Recipe => ({
+    id: supabaseRecipe.id,
+    title: supabaseRecipe.title,
+    ingredients: supabaseRecipe.ingredients || [],
+    instructions: supabaseRecipe.instructions || [],
+    prepTime: supabaseRecipe.prep_time,
+    cookTime: supabaseRecipe.cook_time,
+    totalTime: supabaseRecipe.total_time,
+    servings: supabaseRecipe.servings,
+    imageUrl: supabaseRecipe.image_url,
+    sourceUrl: supabaseRecipe.source_url,
+    tags: supabaseRecipe.tags || [],
+    author: supabaseRecipe.author,
+    cuisine: supabaseRecipe.cuisine,
+    mealType: supabaseRecipe.meal_type,
+    dateAdded: supabaseRecipe.created_at,
+    userId: supabaseRecipe.user_id
+  });
+
   // Fetch from Supabase on mount
   useEffect(() => {
     if (user) fetchRecipes();
   }, [user]);
 
   const fetchRecipes = async () => {
-    if (!user) return; // Add this check
-    
-    setLoading(true);
-    const { data, error } = await supabase
-      .from('recipes')
-      .select('*')
-      .eq('user_id', user.id) // Changed from user?.id to user.id since we have the check above
-      .order('created_at', { ascending: false });
+  if (!user) return;
+  
+  setLoading(true);
+  const { data, error } = await supabase
+    .from('recipes')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching recipes:', error);
     } else {
-      setRecipes(data || []);
+      // Map the data to Recipe format
+      const mappedRecipes = (data || []).map(mapSupabaseToRecipe);
+      setRecipes(mappedRecipes);
     }
 
     setLoading(false);
@@ -35,30 +56,29 @@ export const useRecipes = () => {
   const addRecipe = async (recipeFormData: any) => {
     if (!user) throw new Error('User not authenticated');
 
-    // Convert form strings to proper types for Supabase
-    const supabaseRecipe = {
-      title: recipeFormData.title,
-      ingredients: recipeFormData.ingredients.split('\n').map((i: string) => i.trim()).filter((i: string) => i),
-      instructions: recipeFormData.instructions.split('\n').map((i: string) => i.trim()).filter((i: string) => i),
-      prep_time: recipeFormData.prepTime ? parseInt(recipeFormData.prepTime) : null,
-      cook_time: recipeFormData.cookTime ? parseInt(recipeFormData.cookTime) : null,
-      total_time: (recipeFormData.prepTime && recipeFormData.cookTime) 
-        ? parseInt(recipeFormData.prepTime) + parseInt(recipeFormData.cookTime) 
-        : null,
-      servings: recipeFormData.servings ? parseInt(recipeFormData.servings) : null,
-      image_url: recipeFormData.imageUrl || null,
-      source_url: recipeFormData.sourceUrl || null,
-      tags: recipeFormData.tags ? recipeFormData.tags.split(',').map((t: string) => t.trim()).filter((t: string) => t) : [],
-      author: recipeFormData.author || null,
-      cuisine: recipeFormData.cuisine || null,
-      meal_type: recipeFormData.mealType || null,
-      user_id: user.id,
-    };
+  const supabaseRecipe = {
+    title: recipeFormData.title,
+    ingredients: recipeFormData.ingredients.split('\n').map((i: string) => i.trim()).filter((i: string) => i),
+    instructions: recipeFormData.instructions.split('\n').map((i: string) => i.trim()).filter((i: string) => i),
+    prep_time: recipeFormData.prepTime ? parseInt(recipeFormData.prepTime) : null,
+    cook_time: recipeFormData.cookTime ? parseInt(recipeFormData.cookTime) : null,
+    total_time: (recipeFormData.prepTime && recipeFormData.cookTime) 
+      ? parseInt(recipeFormData.prepTime) + parseInt(recipeFormData.cookTime) 
+      : null,
+    servings: recipeFormData.servings ? parseInt(recipeFormData.servings) : null,
+    image_url: recipeFormData.imageUrl || null,
+    source_url: recipeFormData.sourceUrl || null,
+    tags: recipeFormData.tags ? recipeFormData.tags.split(',').map((t: string) => t.trim()).filter((t: string) => t) : [],
+    author: recipeFormData.author || null,
+    cuisine: recipeFormData.cuisine || null,
+    meal_type: recipeFormData.mealType || null,
+    user_id: user.id,
+  };
 
-    const { data, error } = await supabase
-      .from('recipes')
-      .insert([supabaseRecipe])
-      .select();
+  const { data, error } = await supabase
+    .from('recipes')
+    .insert([supabaseRecipe])
+    .select();
 
     if (error) {
       console.error('Error adding recipe:', error);
@@ -67,7 +87,10 @@ export const useRecipes = () => {
 
     const newRecipe = data?.[0];
     if (newRecipe) {
-      setRecipes(prev => [newRecipe, ...prev]);
+      // Map the returned data to Recipe format
+      const mappedRecipe = mapSupabaseToRecipe(newRecipe);
+      setRecipes(prev => [mappedRecipe, ...prev]);
+      return mappedRecipe;
     }
 
     return newRecipe;
@@ -93,7 +116,6 @@ export const useRecipes = () => {
   const updateRecipe = async (id: string, recipeFormData: any) => {
   if (!user) throw new Error('User not authenticated');
   
-  // Convert form strings to proper types for Supabase (same as addRecipe)
   const supabaseRecipe = {
     title: recipeFormData.title,
     ingredients: recipeFormData.ingredients.split('\n').map((i: string) => i.trim()).filter((i: string) => i),
@@ -110,7 +132,6 @@ export const useRecipes = () => {
     author: recipeFormData.author || null,
     cuisine: recipeFormData.cuisine || null,
     meal_type: recipeFormData.mealType || null,
-    // Don't include user_id in updates, it should stay the same
   };
 
   const { data, error } = await supabase
@@ -127,9 +148,12 @@ export const useRecipes = () => {
 
   const updated = data?.[0];
   if (updated) {
+    // Map the returned data to Recipe format
+    const mappedRecipe = mapSupabaseToRecipe(updated);
     setRecipes(prev =>
-      prev.map(recipe => (recipe.id === id ? { ...recipe, ...updated } : recipe))
+      prev.map(recipe => (recipe.id === id ? mappedRecipe : recipe))
     );
+    return mappedRecipe;
   }
 
   return updated;

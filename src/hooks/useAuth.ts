@@ -30,6 +30,7 @@ export const useAuth = () => {
         });
       } else {
         setUser(null);
+        
       }
       setLoading(false);
     });
@@ -83,6 +84,7 @@ export const useAuth = () => {
     try {
       await signOut(auth);
       setUser(null);
+      window.location.reload(); // clears users saved recipes on log out
     } finally {
       setLoading(false);
     }
