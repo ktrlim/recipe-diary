@@ -12,7 +12,7 @@ import {
 interface User {
   id: string;
   email: string;
-  name?: string; // Not stored by Firebase Auth unless you set it manually
+  name?: string; // Not stored by Firebase Auth unless set manually
 }
 
 export const useAuth = () => {
@@ -84,7 +84,7 @@ export const useAuth = () => {
     try {
       await signOut(auth);
       setUser(null);
-      window.location.reload(); // clears users saved recipes on log out
+      window.location.reload(); // Clears users saved recipes on log out
     } finally {
       setLoading(false);
     }

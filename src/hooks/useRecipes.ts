@@ -97,13 +97,13 @@ export const useRecipes = () => {
   };
 
   const deleteRecipe = async (id: string) => {
-    if (!user) throw new Error('User not authenticated'); // Add this check
+    if (!user) throw new Error('User not authenticated'); // Add check
     
     const { error } = await supabase
       .from('recipes')
       .delete()
       .eq('id', id)
-      .eq('user_id', user.id); // Changed from user?.id to user.id
+      .eq('user_id', user.id); // Changed from user?.id to user.id (RLS)
 
     if (error) {
       console.error('Error deleting recipe:', error);
