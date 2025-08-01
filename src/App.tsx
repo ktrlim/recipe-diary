@@ -14,7 +14,7 @@ function App() {
   const [activeTab, setActiveTab] = useState<'recipes' | 'add' | 'account'>('recipes');
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
   const { recipes, addRecipe, updateRecipe, deleteRecipe, importRecipes, exportRecipes, clearAllRecipes } = useRecipes();
-  const { user, loading, signUp, signIn, signOut, isAuthenticated } = useAuth();
+  const { user, loading, signUp, signIn, signOut, signInWithGoogle, isAuthenticated } = useAuth();
 
   const handleAddRecipe = (formData: RecipeFormData) => {
   return addRecipe(formData).then(() => {
@@ -55,6 +55,10 @@ const handleUpdateRecipe = (formData: RecipeFormData) => {
     setActiveTab('recipes');
   };
 
+  const handleGoogleSignIn = async () => {
+    await signInWithGoogle();
+  };
+
   return (
     <div className="app-container">
       <Header 
@@ -93,6 +97,7 @@ const handleUpdateRecipe = (formData: RecipeFormData) => {
             <AuthPage 
               onSignUp={handleSignUp}
               onSignIn={handleSignIn}
+              onGoogleSignIn={handleGoogleSignIn}
               loading={loading}
             />
           )

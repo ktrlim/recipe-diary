@@ -7,6 +7,8 @@ import {
   onAuthStateChanged,
   updateProfile,
   User as FirebaseUser,
+  GoogleAuthProvider, 
+  signInWithPopup,
 } from 'firebase/auth';
 
 interface User {
@@ -90,12 +92,25 @@ export const useAuth = () => {
     }
   };
 
+  const signInWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      return user;
+    } catch (error) {
+      console.error('Google sign-in error:', error);
+      throw error;
+    }
+  };
+
   return {
     user,
     loading,
     signUp,
     signIn,
     signOut: signOutUser,
+    signInWithGoogle,
     isAuthenticated: !!user,
   };
 };
